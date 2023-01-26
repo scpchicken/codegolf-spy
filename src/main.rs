@@ -1,4 +1,5 @@
 use serde_json;
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs;
 use std::string::String;
@@ -30,6 +31,14 @@ fn main() {
   let mut point_total = 0;
 
   for x in json.as_array().unwrap().into_iter() {
+    let scoring = x["scoring"].as_str().unwrap().to_string();
+
+    match scoring.as_str() {
+      "chars" => continue,
+      "bytes" => {}
+      _ => panic!("invalid scoring"),
+    };
+
     let lang = x["lang"].as_str().unwrap().to_string();
     let hole = x["hole"].as_str().unwrap().to_string();
     let login = x["login"].as_str().unwrap().to_string();
@@ -59,7 +68,7 @@ fn main() {
               .insert(lang.clone(), (byte, 696969420));
           }
         }
-        None => panic!("should have init before"),
+        None => panic!("should have init login before"),
       }
     }
 
@@ -67,12 +76,16 @@ fn main() {
       stat.byte_min = byte;
     }
 
+    stat
+      .byte_min_hash
+      .entry(lang.clone())
+      .or_insert((696969420, 0));
     match stat.byte_min_hash.clone().get(&lang) {
       Some((m, s)) => {
         let s_new = if dup_hash.contains_key(&format!("{} {} {}", hole, lang, login)) {
           s + 0
         } else {
-          dup_hash.insert(format!("{} {} {}", hole, lang, login), 1);
+          dup_hash.insert(format!("{} {} {}", hole, lang, login), 42069);
           s + 1
         };
 
@@ -81,9 +94,7 @@ fn main() {
           stat.byte_min_hash.insert(lang.clone(), (byte, s_new));
         }
       }
-      None => {
-        stat.byte_min_hash.insert(lang.clone(), (byte, 1));
-      }
+      None => panic!("should have init stat before"),
     }
   }
 
@@ -114,31 +125,36 @@ fn main() {
           // Points = Sb ÷ Su × 1000
           let sb = ((sqrt_n + 2.0) / (sqrt_n + 3.0)) * lang_byte_min as f64 +
             (1.0 / (sqrt_n + 3.0)) * byte_min as f64;
-          let point = (sb / login_byte as f64 * 1000.0).round();
-          (
-            hole.clone(),
-            lang,
-            (if lang_byte_min == login_byte {
-              f64::max(750.0, point)
-            } else {
-              point
-            }) as isize,
-          )
+          let point = sb / login_byte as f64 * 1000.0;
+          (hole.clone(), lang, point)
         })
         .collect::<Vec<_>>();
 
-      login_byte_score_vec.sort_unstable_by_key(|x| -x.2);
+      login_byte_score_vec.sort_by(|a, b| match b.2.partial_cmp(&a.2).unwrap() {
+        Ordering::Equal => a.1.cmp(&b.1),
+        o => o,
+      });
 
       let (hole, lang, point) = login_byte_score_vec.into_iter().next().unwrap();
-      point_total += point;
+
+      // rounding each time gives more accurate results than using f64 and rounding at the end
+      point_total += point.round() as isize;
       Sol {
         hole,
-        lang: if point == 0 { "N/A".to_string() } else { lang },
-        point,
+        lang: if point == 0.0 {
+          "N/A".to_string()
+        } else {
+          lang
+        },
+        point: point.round() as isize,
       }
     })
     .collect::<Vec<_>>();
 
   login_top.sort_unstable_by_key(|x| (-x.point, x.hole.clone()));
-  println!("{}\n\ntotal: {}", Table::new(login_top).to_string(), point_total);
+  println!(
+    "{}\n\ntotal: {}",
+    Table::new(login_top).to_string(),
+    point_total
+  );
 }
