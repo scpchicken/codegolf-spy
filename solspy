@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [ "$1" == "d" ]
+if [ "$1" == "-d" ]
 then
   curl -L https://code.golf/scores/all-holes/all-langs/all -o bruh.json
   shift
@@ -10,5 +10,6 @@ if [ -z "$1" ]
 then
   echo "you dumb"
 else
+  cd solspy-src
   cargo run --release -- "$1"
 fi

@@ -1,16 +1,26 @@
 [package]
-name = "codegolf-api"
+name = "codegolf-spy"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[profile.dev]
+[dependencies]
+
+[profile.dev.package.solspy-src]
 opt-level = 0
 
-[profile.release]
+[profile.release.package.solspy-src]
 opt-level = 3
 
-[dependencies]
-serde_json = "1.0"
-tabled = "0.10.0"
+[profile.dev.package.pointspy-src]
+opt-level = 0
+
+[profile.release.package.pointspy-src]
+opt-level = 3
+
+[workspace]
+members = [
+  "solspy-src",
+  "pointspy-src"
+]
